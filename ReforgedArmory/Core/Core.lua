@@ -8,7 +8,7 @@ local GetItemQualityColor = C_Item and C_Item.GetItemQualityColor
 
 local GradientTexture = [[Interface\AddOns\ReforgedArmory\Media\Gradient]]
 local ReversedGradientTexture = [[Interface\AddOns\ReforgedArmory\Media\Gradient-Reversed]]
-local WarningTexture = [[Interface\AddOns\ElvUI\Core\Media\Textures\Minimalist]]
+local WarningTexture = [[Interface\AddOns\ElvUI\Game\Shared\Media\Textures\Minimalist]]
 
 local DurabilityConstants = Engine.Durability
 local DurabilityBarOffsets = DurabilityConstants.Bar.OffSets
