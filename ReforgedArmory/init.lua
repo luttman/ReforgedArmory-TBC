@@ -4,6 +4,8 @@ local M = E.Misc
 local AddOnName, Engine = ...
 
 local DisableAddOn = C_AddOns.DisableAddOn
+local GetAddOnMetadata = C_AddOns.GetAddOnMetadata
+local IsAddOnLoaded = C_AddOns.IsAddOnLoaded
 
 local module = E:NewModule(AddOnName, 'AceHook-3.0', 'AceEvent-3.0')
 module.Title = GetAddOnMetadata('ReforgedArmory', 'Title')
