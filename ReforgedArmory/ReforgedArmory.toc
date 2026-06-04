@@ -1,7 +1,7 @@
 ﻿## Interface: 50504
 ## Title: |cff00FF98Reforged|r|cffA330C9Armory|r
 ## Author: Repooc
-## Version: 1.13
+## Version: 1.14
 ## RequiredDeps: ElvUI
 ## OptionalDeps: ElvUI_WrathArmory, ElvUI_CataArmory
 ## DefaultState: Enabled

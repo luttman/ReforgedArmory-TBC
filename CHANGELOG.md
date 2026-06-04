@@ -1,5 +1,3 @@
-v1.14 ?/?/2025
+v1.14 6/3/2026
 
-• [New] add text options for the durability bar
-• [New] add color option for the slot backgrounds "normal" color
-• [Update] Updated some code for slot background and warning indicator (hopefully no sideeffects)
+• [Update] Updated for mop to load
