@@ -5,6 +5,7 @@ local S = E:GetModule('Skins')
 local LSM = E.Libs.LSM
 
 local GetItemQualityColor = C_Item and C_Item.GetItemQualityColor
+local IsAddOnLoaded = C_AddOns.IsAddOnLoaded
 
 local GradientTexture = [[Interface\AddOns\ReforgedArmory\Media\Gradient]]
 local ReversedGradientTexture = [[Interface\AddOns\ReforgedArmory\Media\Gradient-Reversed]]

@@ -1,3 +1,3 @@
-v1.14 6/3/2026
+v1.15 6/3/2026
 
-• [Update] Updated for mop to load
+• [Update] Updated some code for Mists...again
