@@ -1,4 +1,4 @@
-## Interface: 50504
+## Interface: 20506
 ## Title: |cff00FF98Reforged|r|cffA330C9Armory|r-|cff00bfffTBC|r
 ## Author: Repooc, luttman
 ## Version: 1.15-tbc
