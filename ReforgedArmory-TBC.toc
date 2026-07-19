@@ -1,0 +1,14 @@
+## Interface: 50504
+## Title: |cff00FF98Reforged|r|cffA330C9Armory|r-|cff00bfffTBC|r
+## Author: Repooc, luttman
+## Version: 1.15-tbc
+## RequiredDeps: ElvUI
+## OptionalDeps: ElvUI_WrathArmory, ElvUI_CataArmory
+## DefaultState: Enabled
+## X-CleanTitle: ReforgedArmory-TBC
+## IconTexture: Interface\AddOns\ReforgedArmory-TBC\Logo
+
+Libs\Load_Libs.xml
+init.lua
+Core\Load_Core.xml
+Options\Load_Options.xml

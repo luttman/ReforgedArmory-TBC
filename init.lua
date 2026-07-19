@@ -7,10 +7,11 @@ local DisableAddOn = C_AddOns.DisableAddOn
 local GetAddOnMetadata = C_AddOns.GetAddOnMetadata
 local IsAddOnLoaded = C_AddOns.IsAddOnLoaded
 
-local module = E:NewModule(AddOnName, 'AceHook-3.0', 'AceEvent-3.0')
-module.Title = GetAddOnMetadata('ReforgedArmory', 'Title')
-module.CleanTitle = GetAddOnMetadata('ReforgedArmory', 'X-CleanTitle')
-module.Version = GetAddOnMetadata('ReforgedArmory', 'Version')
+local module = E:NewModule('ReforgedArmory', 'AceHook-3.0', 'AceEvent-3.0')
+module.AddOnName = AddOnName
+module.Title = GetAddOnMetadata(AddOnName, 'Title')
+module.CleanTitle = GetAddOnMetadata(AddOnName, 'X-CleanTitle')
+module.Version = GetAddOnMetadata(AddOnName, 'Version')
 module.Configs = {}
 Engine.EnchantsTable = {
 	UserReplaced = {},
@@ -36,7 +37,7 @@ do
 end
 
 function module:Print(...)
-	(E.db and _G[E.db.general.messageRedirect] or _G.DEFAULT_CHAT_FRAME):AddMessage(strjoin('', '|cff00FF98Reforged|r|cffA330C9Armory|r ', E.media.hexvaluecolor or '|cff16c3f2', module.Version, ':|r ', ...)) -- I put DEFAULT_CHAT_FRAME as a fail safe.
+	(E.db and _G[E.db.general.messageRedirect] or _G.DEFAULT_CHAT_FRAME):AddMessage(strjoin('', '|cff00FF98Reforged|r|cffA330C9Armory|r-|cff00bfffTBC|r ', E.media.hexvaluecolor or '|cff16c3f2', module.Version, ':|r ', ...)) -- I put DEFAULT_CHAT_FRAME as a fail safe.
 end
 
 function module:Clamp(value, min, max)
@@ -69,9 +70,11 @@ end
 function module:ADDON_LOADED(_, addon)
 	if addon == 'Blizzard_InspectUI' then
 		module:SetupInspectPageInfo()
-		module:SecureHook('InspectPaperDollFrame_SetLevel', module.InspectPaperDollFrame_SetLevel)
+		if _G.InspectPaperDollFrame_SetLevel then
+			module:SecureHook('InspectPaperDollFrame_SetLevel', module.InspectPaperDollFrame_SetLevel)
+		end
 
-		if not module:IsHooked(_G.InspectFrame, 'OnShow') then
+		if _G.InspectFrame and not module:IsHooked(_G.InspectFrame, 'OnShow') then
 			module:SecureHookScript(_G.InspectFrame, 'OnShow', module.InspectFrame_OnShow)
 		end
 	end
@@ -120,8 +123,10 @@ function module:Initialize()
 
 	if IsAddOnLoaded('Blizzard_InspectUI') then
 		module:SetupInspectPageInfo()
-		module:SecureHook('InspectPaperDollFrame_SetLevel', module.InspectPaperDollFrame_SetLevel)
-		if not module:IsHooked(_G.InspectFrame, 'OnShow') then
+		if _G.InspectPaperDollFrame_SetLevel then
+			module:SecureHook('InspectPaperDollFrame_SetLevel', module.InspectPaperDollFrame_SetLevel)
+		end
+		if _G.InspectFrame and not module:IsHooked(_G.InspectFrame, 'OnShow') then
 			module:SecureHookScript(_G.InspectFrame, 'OnShow', module.InspectFrame_OnShow)
 		end
 	else
@@ -137,7 +142,9 @@ function module:Initialize()
 		module:SecureHookScript(GameTooltip, 'OnTooltipSetItem', module.GameTooltip_OnTooltipSetItem)
 	-- end
 
-	module:SecureHook('PaperDollFrame_SetLevel', module.PaperDollFrame_SetLevel)
+	if _G.PaperDollFrame_SetLevel then
+		module:SecureHook('PaperDollFrame_SetLevel', module.PaperDollFrame_SetLevel)
+	end
 	module:SecureHook(E, 'UpdateDB', module.UpdateOptions)
 end
 

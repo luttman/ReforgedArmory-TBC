@@ -274,6 +274,9 @@ local GS_Formula = {
     [3] = { ["A"] = 0.7500, ["B"] = 1.8000 },
     [2] = { ["A"] = 8.0000, ["B"] = 2.0000 },
     [1] = { ["A"] = 0.0000, ["B"] = 2.2500 }
+  },
+  ["C"] = {
+    [4] = { ["A"] = 0.2500, ["B"] = 1.6275 }
   }
 }
 
@@ -427,10 +430,18 @@ local function ItemScoreCalc(ItemRarity, ItemLevel, ItemEquipLoc)
     ItemRarity = 3
     ItemLevel = heirloomLevel(unitLevel)
   end
-  if (ItemLevel > 120) then
-    Table = GS_Formula["A"]
-  else
+  if (ItemLevel < 100 and ItemRarity == 4) then
+    Table = GS_Formula["C"]
+  elseif (ItemLevel < 168 and ItemRarity == 4) then
     Table = GS_Formula["B"]
+  elseif (ItemLevel < 148 and ItemRarity == 3) then
+    Table = GS_Formula["B"]
+  elseif (ItemLevel < 138 and ItemRarity == 2) then
+    Table = GS_Formula["B"]
+  elseif (ItemLevel <= 120) then
+    Table = GS_Formula["B"]
+  else
+    Table = GS_Formula["A"]
   end
   if ((ItemRarity >= 2) and (ItemRarity <= 4)) then
     local Red, Green, Blue, Description = GetScoreColor((floor(((ItemLevel - Table[ItemRarity].A) / Table[ItemRarity].B) * 1 * Scale)) * 11.25)
@@ -723,6 +734,10 @@ end
 function lib:GetScore(unitorguid)
   local guid = ResolveGUID(unitorguid)
   if (guid) then
+    local scoreData = lib.PlayerScoreData[guid]
+    if scoreData.GearScore == 0 and UnitGUID(unitorguid) == guid then
+      CacheScore(guid, unitorguid, UnitLevel(unitorguid))
+    end
     return guid, lib.PlayerScoreData[guid]
   end
 end

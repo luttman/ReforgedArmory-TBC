@@ -1,18 +1,40 @@
-[![Discord](https://img.shields.io/discord/1162274244487561216?style=for-the-badge&logo=discord&label=Discord)](https://repoocreforged.dev/discord) [![GitHub Repo stars](https://img.shields.io/github/stars/repooc/ReforgedArmory?style=for-the-badge&logo=github)](https://github.com/Repooc/ReforgedArmory)
+# ReforgedArmory-TBC
 
-# **ReforgedArmory *(ElvUI Plugin)***
-[![CurseForge Game Versions](https://img.shields.io/curseforge/game-versions/678586?style=for-the-badge&logo=curseforge)](https://curseforge.com/wow/addons/reforgedarmory-elvui-plugin) [![Version (CF)](https://img.shields.io/curseforge/v/678586?style=for-the-badge&logo=curseforge)](https://curseforge.com/wow/addons/reforgedarmory-elvui-plugin) [![GitHub tag (with filter)](https://img.shields.io/github/v/tag/Repooc/ReforgedArmory?logo=github&label=Version&style=for-the-badge)](https://github.com/Repooc/ReforgedArmory/tags)
+An ElvUI character and inspect-frame enhancement for WoW Classic Anniversary TBC.
 
+## Features
 
-[![Patreon](https://img.shields.io/badge/Patreon-F96854?style=for-the-badge&logo=patreon&logoColor=white)](https://www.patreon.com/repoocreforged) [![ko-fi](https://img.shields.io/badge/_-KO--FI-red?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/repoocreforged)
+- Item levels on equipped gear
+- TacoTip-compatible GearScore totals
+- Enchant and gem information
+- Missing enchant and gem warnings
+- Character durability indicators
+- Expanded character statistics
+- Character-title selector
+- Support for inspecting other players
 
+## Requirements
 
-**Do you wish you could display item level, enchants, gems on the character and inspect frame and have your options easily accessible in the ElvUI config?**  
+- WoW Classic Anniversary TBC
+- ElvUI
 
-### With this plugin, you are now able to do so. As this has most of the "must have" options, I am going to add and tweak some options here and there to get more advanced setups... so stay tuned!
+## Installation
 
-*Note: Ensure you have ElvUI installed for functionality.*
+1. Download or clone this repository.
+2. Place it in `World of Warcraft/_anniversary_/Interface/AddOns/`.
+3. Ensure the addon folder is named `ReforgedArmory-TBC`.
+4. Enable `ReforgedArmory-TBC` from the in-game AddOns menu.
 
-Download now and get what you deserve!
+## Screenshots
 
-![Demo Image](https://i.imgur.com/yunesLW.png)
+![Character frame](Media/screenshot-character.png)
+
+![Inspect frame](Media/screenshot-inspect.png)
+
+The screenshots are temporary and can be replaced with updated images using the same filenames.
+
+## Issues
+
+Report problems through the [GitHub issue tracker](https://github.com/luttman/ReforgedArmory-TBC/issues).
+
+This project is a TBC-focused fork of ReforgedArmory.

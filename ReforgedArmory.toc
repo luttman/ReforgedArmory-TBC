@@ -1,13 +1,11 @@
-﻿## Interface: 50504
-## Title: |cff00FF98Reforged|r|cffA330C9Armory|r
-## Author: Repooc
-## Version: 1.15
+## Interface: 50504
+## Title: |cff00FF98Reforged|r|cffA330C9Armory|r-|cff00bfffTBC|r
+## Author: Repooc, luttman
+## Version: 1.15-tbc
 ## RequiredDeps: ElvUI
 ## OptionalDeps: ElvUI_WrathArmory, ElvUI_CataArmory
 ## DefaultState: Enabled
-## X-CleanTitle: ReforgedArmory
-## X-Curse-Project-ID: 678586
-## X-Wago-ID: e56nlmG9
+## X-CleanTitle: ReforgedArmory-TBC
 ## IconTexture: Interface\AddOns\ReforgedArmory\Logo
 
 Libs\Load_Libs.xml

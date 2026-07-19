@@ -3,12 +3,14 @@ local _, Engine = ...
 local module = E:GetModule('ReforgedArmory')
 local S = E:GetModule('Skins')
 local LSM = E.Libs.LSM
+local LibGearScore = LibStub:GetLibrary('LibGearScore.1000', true)
 
 local GetItemQualityColor = C_Item and C_Item.GetItemQualityColor
+local GetDetailedItemLevelInfo = C_Item and C_Item.GetDetailedItemLevelInfo or _G.GetDetailedItemLevelInfo
 local IsAddOnLoaded = C_AddOns.IsAddOnLoaded
 
-local GradientTexture = [[Interface\AddOns\ReforgedArmory\Media\Gradient]]
-local ReversedGradientTexture = [[Interface\AddOns\ReforgedArmory\Media\Gradient-Reversed]]
+local GradientTexture = [[Interface\AddOns\]]..module.AddOnName..[[\Media\Gradient]]
+local ReversedGradientTexture = [[Interface\AddOns\]]..module.AddOnName..[[\Media\Gradient-Reversed]]
 local WarningTexture = [[Interface\AddOns\ElvUI\Game\Shared\Media\Textures\Minimalist]]
 
 local DurabilityConstants = Engine.Durability
@@ -435,6 +437,13 @@ function module:UpdateInspectInfo(_, arg1)
     module:UpdatePageInfo(_G.InspectFrame, 'Inspect', arg1)
 end
 
+function module:LibGearScore_Update(_, guid)
+    local frame = _G.InspectFrame
+    if frame and frame:IsVisible() and frame.unit and UnitGUID(frame.unit) == guid then
+        module:UpdatePageInfo(frame, 'Inspect', guid)
+    end
+end
+
 function module:UpdateCharacterInfo(event)
     if (not E.db.cataarmory.character.enable)
     or (whileOpenEvents[event] and not _G.CharacterFrame:IsShown()) then return end
@@ -486,7 +495,7 @@ function module:UpdatePageStrings(i, iLevelDB, inspectItem, slotInfo, which)
 	local info = Engine.GearList[slotName]
 	local canEnchant = (which == 'Character' and info.isCharProf and info.isCharProf('Enchanting')) or info.canEnchant
 	local direction = info.direction
-	local isSkinned = E.private.skins.blizzard.enable and E.private.skins.blizzard.inpsect
+	local isSkinned = E.private.skins.blizzard.enable and E.private.skins.blizzard.inspect
 
 	if not info.ignored then
 		do
@@ -602,8 +611,16 @@ function module:UpdateAverageString(frame, which, iLevelDB)
         avgItemLevel = E:CalculateAverageItemLevel(iLevelDB, frame.unit or 'target')
     end
 
-    if avgItemLevel then
-        frame.ReforgedArmory.AvgItemLevel.Text:SetText(avgItemLevel)
+    local displayValue = avgItemLevel
+    if E.TBC and LibGearScore then
+        local _, score = LibGearScore:GetScore(isCharPage and 'player' or frame.unit)
+        if score and score.AvgItemLevel and score.AvgItemLevel > 0 then
+            displayValue = format('iLvl: %s  GS: %s', score.AvgItemLevel, score.GearScore or 0)
+        end
+    end
+
+    if displayValue then
+        frame.ReforgedArmory.AvgItemLevel.Text:SetText(displayValue)
         frame.ReforgedArmory.AvgItemLevel.Text:SetTextColor(textOptions.color.r, textOptions.color.g, textOptions.color.b)
     else
         frame.ReforgedArmory.AvgItemLevel.Text:SetText('')
@@ -659,6 +676,124 @@ do
 	end
 end
 
+local function CreateLegacyStatsPane()
+    if not E.TBC or not _G.CharacterFrame or not _G.PaperDollItemsFrame then return end
+
+    local frame = _G.CharacterFrame
+    local isSkinned = E.private.skins.blizzard.enable and E.private.skins.blizzard.character
+    local statsFrame = module.Stats
+    if not statsFrame then
+        if isSkinned then
+            S:HandleFrame(frame, true, nil, 11, -12, 0, 65)
+        end
+
+        local anchor = frame.backdrop or frame
+        statsFrame = CreateFrame('Frame', 'ReforgedArmory_StatsPane', _G.PaperDollItemsFrame)
+        statsFrame:SetFrameLevel(math.max(0, frame:GetFrameLevel() - 1))
+        statsFrame:SetPoint('TOPLEFT', anchor, 'TOPRIGHT', -1, 0)
+        statsFrame:SetPoint('BOTTOMRIGHT', anchor, 'BOTTOMRIGHT', 180, 0)
+        statsFrame:SetTemplate('Transparent')
+        module.Stats = statsFrame
+
+        if _G.CharacterFrameCloseButton then
+            _G.CharacterFrameCloseButton:ClearAllPoints()
+            _G.CharacterFrameCloseButton:SetPoint('TOPRIGHT', anchor, 'TOPRIGHT', 0, 2)
+        end
+
+        local title = CreateFrame('Frame', nil, statsFrame)
+        title:SetSize(170, 20)
+        title:SetPoint('TOP', statsFrame, 'TOP', 0, -5)
+        local titleText = title:CreateFontString(nil, 'OVERLAY', 'GameTooltipText')
+        titleText:SetPoint('CENTER')
+        titleText:SetText('|cff00FF98Reforged|r|cffA330C9Armory|r-|cff00bfffTBC|r')
+    end
+
+    local middleResistance = _G.MagicResFrame3
+    if middleResistance then
+        middleResistance:ClearAllPoints()
+        middleResistance:SetPoint('TOP', statsFrame, 'TOP', 0, -78)
+        local resistances = {
+            { 2, 3, 'RIGHT', 'LEFT', -1 }, { 1, 2, 'RIGHT', 'LEFT', -1 },
+            { 4, 3, 'LEFT', 'RIGHT', 1 }, { 5, 4, 'LEFT', 'RIGHT', 1 },
+        }
+        for _, info in next, resistances do
+            local resistance = _G['MagicResFrame'..info[1]]
+            local relative = _G['MagicResFrame'..info[2]]
+            if resistance and relative then
+                resistance:ClearAllPoints()
+                resistance:SetPoint(info[3], relative, info[4], info[5], 0)
+            end
+        end
+    end
+
+    local leftDropDown = _G.PlayerStatFrameLeftDropdown or _G.PlayerStatFrameLeftDropDown
+    local rightDropDown = _G.PlayerStatFrameRightDropdown or _G.PlayerStatFrameRightDropDown
+    if leftDropDown then
+        leftDropDown:ClearAllPoints()
+        leftDropDown:SetPoint('TOP', statsFrame, 'TOP', 0, -140)
+        leftDropDown:SetWidth(140)
+    end
+    if _G.PlayerStatLeftTop and leftDropDown then
+        _G.PlayerStatLeftTop:ClearAllPoints()
+        _G.PlayerStatLeftTop:SetPoint('TOP', leftDropDown, 'BOTTOM', 0, 8)
+    end
+    if _G.PlayerStatFrameLeft1 and _G.PlayerStatLeftTop then
+        _G.PlayerStatFrameLeft1:ClearAllPoints()
+        _G.PlayerStatFrameLeft1:SetPoint('TOPLEFT', _G.PlayerStatLeftTop, 'TOPLEFT', 6, -3)
+    end
+    if rightDropDown then
+        rightDropDown:ClearAllPoints()
+        rightDropDown:SetPoint('TOP', statsFrame, 'TOP', 0, -280)
+        rightDropDown:SetWidth(140)
+    end
+    if _G.PlayerStatRightTop and rightDropDown then
+        _G.PlayerStatRightTop:ClearAllPoints()
+        _G.PlayerStatRightTop:SetPoint('TOP', rightDropDown, 'BOTTOM', 0, 8)
+    end
+    if _G.PlayerStatFrameRight1 and _G.PlayerStatRightTop then
+        _G.PlayerStatFrameRight1:ClearAllPoints()
+        _G.PlayerStatFrameRight1:SetPoint('TOPLEFT', _G.PlayerStatRightTop, 'TOPLEFT', 6, -3)
+    end
+
+    for _, region in next, { _G.PlayerStatLeftTop, _G.PlayerStatLeftMiddle, _G.PlayerStatLeftBottom, _G.PlayerStatRightTop, _G.PlayerStatRightMiddle, _G.PlayerStatRightBottom } do
+        if region then region:SetWidth(150) end
+    end
+    for index = 1, 6 do
+        local leftStat = _G['PlayerStatFrameLeft'..index]
+        local rightStat = _G['PlayerStatFrameRight'..index]
+        if leftStat then
+            leftStat:ClearAllPoints()
+            leftStat:SetPoint('TOPLEFT', statsFrame, 'TOPLEFT', 15, -174 - ((index - 1) * 15))
+            leftStat:SetWidth(150)
+        end
+        if rightStat then
+            rightStat:ClearAllPoints()
+            rightStat:SetPoint('TOPLEFT', statsFrame, 'TOPLEFT', 15, -314 - ((index - 1) * 15))
+            rightStat:SetWidth(150)
+        end
+    end
+
+    local levelText = _G.CharacterLevelText
+    local titleDropDown = _G.PlayerTitleDropdown or _G.PlayerTitleDropDown
+    if levelText and _G.CharacterFrameTitleText then
+        levelText:ClearAllPoints()
+        levelText:SetPoint('TOP', _G.CharacterFrameTitleText, 'BOTTOM', 0, -2)
+        levelText:Show()
+    end
+    if titleDropDown then
+        local titleParent = _G.PaperDollFrame or frame
+        titleDropDown:SetParent(titleParent)
+        titleDropDown:SetFrameLevel(titleParent:GetFrameLevel() + 5)
+        titleDropDown:ClearAllPoints()
+        titleDropDown:SetPoint('TOP', frame, 'TOP', 0, -45)
+        titleDropDown:SetWidth(160)
+        titleDropDown:SetAlpha(1)
+        titleDropDown:SetScript('OnEnter', function(dropDown) dropDown:SetAlpha(1) end)
+        titleDropDown:SetScript('OnLeave', function(dropDown) dropDown:SetAlpha(1) end)
+        titleDropDown:Show()
+    end
+end
+
 local function CreateAvgItemLevel(frame, which)
 	if not frame or not which then return end
 
@@ -666,10 +801,13 @@ local function CreateAvgItemLevel(frame, which)
 	local textOptions, frameOptions = db.avgItemLevel.text, db.avgItemLevel.frame
 	local isCharPage = which == 'Character'
 
-	local textFrame = CreateFrame('Frame', 'ReforgedArmory.'..which..'_AvgItemLevel', (isCharPage and PaperDollFrame) or InspectPaperDollFrame)
+	local textFrame = CreateFrame('Frame', 'ReforgedArmory.'..which..'_AvgItemLevel', (isCharPage and module.Stats) or (isCharPage and PaperDollFrame) or InspectPaperDollFrame)
+	textFrame:SetFrameLevel(textFrame:GetParent():GetFrameLevel() + 10)
 	textFrame:Size(170, 30)
 	textFrame:ClearAllPoints()
-	if isCharPage then
+	if isCharPage and module.Stats then
+		textFrame:SetPoint('TOP', module.Stats, 'TOP', 0, -30)
+	elseif isCharPage then
 		textFrame:SetPoint((frameOptions.attachTo == 'CharacterLevelText' or frameOptions.attachTo == 'PaperDollFrame') and 'TOP' or 'BOTTOM', frameOptions.attachTo, (frameOptions.attachTo == 'CharacterLevelText') and 'BOTTOM' or 'TOP', frameOptions.xOffset, frameOptions.yOffset)
 	else
 		textFrame:SetPoint('TOP', frameOptions.attachTo, (frameOptions.attachTo == 'InspectLevelText') and 'BOTTOM' or 'TOP', frameOptions.xOffset, frameOptions.yOffset)
@@ -755,6 +893,7 @@ function module:CreateSlotStrings(frame, which)
 	local itemLevel, enchant = db.itemLevel, db.enchant
 	frame.ReforgedArmory = frame.ReforgedArmory or {}
 
+	if which == 'Character' then CreateLegacyStatsPane() end
 	CreateAvgItemLevel(frame, which)
 
 	for slotName, info in pairs(Engine.GearList) do
@@ -826,18 +965,25 @@ function module:InspectFrame_OnShow()
 	local frame = _G.InspectFrame
 	if not frame or frame.InspectInfoHooked then return end
 	local isSkinned = E.private.skins.blizzard.enable and E.private.skins.blizzard.inspect
+	local modelFrame = _G.InspectModelFrame
+	local rotateLeft = _G.InspectModelFrameRotateLeftButton
+	local rotateRight = _G.InspectModelFrameRotateRightButton
 
 	--* Move Rotate Buttons on InspectFrame
 	if isSkinned then
-		_G.InspectModelFrameRotateLeftButton:ClearAllPoints()
-		_G.InspectModelFrameRotateLeftButton:SetPoint('TOPLEFT', _G.InspectFrame, 'TOPLEFT', 3, -3)
-		_G.InspectModelFrameRotateLeftButton:Show()
-		_G.InspectModelFrameRotateRightButton:ClearAllPoints()
-		_G.InspectModelFrameRotateRightButton:Point('TOPLEFT', _G.InspectModelFrameRotateLeftButton, 'TOPRIGHT', 3, 0)
-		_G.InspectModelFrameRotateRightButton:Show()
+		if rotateLeft and rotateRight then
+			rotateLeft:ClearAllPoints()
+			rotateLeft:SetPoint('TOPLEFT', frame, 'TOPLEFT', 3, -3)
+			rotateLeft:Show()
+			rotateRight:ClearAllPoints()
+			rotateRight:Point('TOPLEFT', rotateLeft, 'TOPRIGHT', 3, 0)
+			rotateRight:Show()
+		end
 
-		_G.InspectModelFrame:ClearAllPoints()
-		_G.InspectModelFrame:SetPoint('TOP', 0, -78)
+		if modelFrame then
+			modelFrame:ClearAllPoints()
+			modelFrame:SetPoint('TOP', 0, -78)
+		end
 
 		_G.InspectSecondaryHandSlot:ClearAllPoints()
 		_G.InspectSecondaryHandSlot:SetPoint('BOTTOM', frame, 'BOTTOM', 0, 20)
@@ -848,8 +994,10 @@ function module:InspectFrame_OnShow()
 		_G.InspectFrameCloseButton:SetPoint('TOPRIGHT', frame, 'TOPRIGHT', -4, -4)
 
 		if frame.backdrop then
-			_G.InspectModelFrame:ClearAllPoints()
-			_G.InspectModelFrame:SetPoint('TOP', _G.InspectPaperDollFrame, 'TOP', -5, -88)
+			if modelFrame then
+				modelFrame:ClearAllPoints()
+				modelFrame:SetPoint('TOP', _G.InspectPaperDollFrame, 'TOP', -5, -88)
+			end
 
 			frame.backdrop:ClearAllPoints()
 			frame.backdrop:SetPoint('TOPLEFT', frame, 'TOPLEFT', 11, -12)
@@ -863,11 +1011,11 @@ function module:InspectFrame_OnShow()
 			_G.InspectHandsSlot:ClearAllPoints()
 			_G.InspectHandsSlot:SetPoint('TOPRIGHT', _G.InspectPaperDollItemsFrame, 'TOPRIGHT', -15, -74)
 		end
-	else
-		_G.InspectModelFrameRotateLeftButton:ClearAllPoints()
-		_G.InspectModelFrameRotateLeftButton:SetPoint('BOTTOMLEFT', _G.InspectModelFrame, 'TOPLEFT', 0, -1)
-		_G.InspectModelFrameRotateRightButton:ClearAllPoints()
-		_G.InspectModelFrameRotateRightButton:Point('TOPLEFT', _G.InspectModelFrameRotateLeftButton, 'TOPRIGHT', -6, 0)
+	elseif rotateLeft and rotateRight and modelFrame then
+		rotateLeft:ClearAllPoints()
+		rotateLeft:SetPoint('BOTTOMLEFT', modelFrame, 'TOPLEFT', 0, -1)
+		rotateRight:ClearAllPoints()
+		rotateRight:Point('TOPLEFT', rotateLeft, 'TOPRIGHT', -6, 0)
 	end
 
 	frame.InspectInfoHooked = true
@@ -892,7 +1040,7 @@ function module:UpdateInspectPageFonts(which, force)
     local itemLevel, enchant, durability = db.itemLevel, db.enchant, db.durability
 
     module:UpdateAvgItemLevel(which)
-    if isCharPage then
+    if isCharPage and _G.CharacterModelScene and _G.CharacterModelScene.ControlFrame then
         local controlsDisplayMode = db.model.controlsDisplayMode
         if controlsDisplayMode == 'SHOW' then
             _G.CharacterModelScene.ControlFrame:Show()
@@ -990,7 +1138,7 @@ function module:AcquireGemInfo(itemLink)
     return temp.gems, temp.emptySockets, temp.filledSockets, temp.baseSocketCount
 end
 
-local githubURL = 'https://github.com/Repooc/ReforgedArmory/issues'
+local githubURL = 'https://github.com/luttman/ReforgedArmory-TBC/issues'
 local missingIDs = {}
 local MATCH_ITEM_LEVEL = ITEM_LEVEL:gsub('%%d', '(%%d+)')
 local MATCH_ITEM_LEVEL_ALT = ITEM_LEVEL_ALT:gsub('%%d(%s?)%(%%d%)', '%%d+%1%%((%%d+)%%)')
@@ -1009,6 +1157,9 @@ function module:GetGearSlotInfo(unit, slot, deepScan)
 
 	local itemLink = GetInventoryItemLink(unit, slot)
 	if not itemLink then return slotInfo end
+	if GetDetailedItemLevelInfo then
+		slotInfo.itemLevel = GetDetailedItemLevelInfo(itemLink)
+	end
 
 	--* Get Item Quality Info
 	local quality = GetInventoryItemQuality(unit, slot)
@@ -1019,7 +1170,7 @@ function module:GetGearSlotInfo(unit, slot, deepScan)
 	local hasItem = tt:SetInventoryItem(unit, slot)
 	slotInfo.gems, slotInfo.emptySockets, slotInfo.filledSockets, slotInfo.baseSocketCount = module:AcquireGemInfo(itemLink)
 	
-	if UnitLevel(unit) >= 70 and slot == 6 and (#slotInfo.filledSockets + #slotInfo.emptySockets <= slotInfo.baseSocketCount) then
+	if not E.TBC and UnitLevel(unit) >= 70 and slot == 6 and (#slotInfo.filledSockets + #slotInfo.emptySockets <= slotInfo.baseSocketCount) then
 		slotInfo.missingBeltBuckle = true
 	end
 	
@@ -1105,12 +1256,17 @@ end
 
 local function HandleCharacterFrameExpand()
     local db = E.db.cataarmory.character.expandButton
-    if _G.PaperDollFrame:IsVisible() or _G.PetPaperDollFrame:IsVisible() then
+    local expandButton = _G.CharacterFrameExpandButton
+    if not expandButton then return end
+
+    local paperDollVisible = _G.PaperDollFrame and _G.PaperDollFrame:IsVisible()
+    local petPaperDollVisible = _G.PetPaperDollFrame and _G.PetPaperDollFrame:IsVisible()
+    if (paperDollVisible or petPaperDollVisible) and _G.CharacterStatsPane then
         if _G.CharacterStatsPane:IsShown() ~= db.autoExpand then
-            _G.CharacterFrameExpandButton:Click()
+            expandButton:Click()
         end
     end
-    _G.CharacterFrameExpandButton:SetShown(not db.hide)
+    expandButton:SetShown(not db.hide)
 end
 
 local function ControlFrame_OnShow(frame)
@@ -1135,55 +1291,83 @@ end
 local function ControlFrame_OnLeave()
     local db = E.db.cataarmory.character.model
     local controlsDisplayMode = db.controlsDisplayMode
-    if controlsDisplayMode == 'SHOW' then
+    if controlsDisplayMode == 'SHOW' and _G.CharacterModelScene and _G.CharacterModelScene.ControlFrame then
         _G.CharacterModelScene.ControlFrame:Show()
     end
 end
 
 local function CharacterFrame_OnShow()
     module.UpdateCharacterInfo()
+    CreateLegacyStatsPane()
+    E:Delay(0.1, CreateLegacyStatsPane)
+    E:Delay(0.5, CreateLegacyStatsPane)
+    E:Delay(0.1, module.UpdatePageInfo, module, _G.CharacterFrame, 'Character')
+    E:Delay(0.5, module.UpdatePageInfo, module, _G.CharacterFrame, 'Character')
     local isSkinned = E.private.skins.blizzard.enable and E.private.skins.blizzard.character
 
     local frame = _G.CharacterFrame
+    local modelScene = _G.CharacterModelScene
     if isSkinned then
-        CharacterMainHandSlot:ClearAllPoints()
-        CharacterMainHandSlot:SetPoint('BOTTOMLEFT', _G.PaperDollItemsFrame, 'BOTTOMLEFT', 106, -5)
+        if module.Stats and _G.CharacterMainHandSlot and _G.PaperDollItemsFrame then
+            _G.CharacterMainHandSlot:ClearAllPoints()
+            _G.CharacterMainHandSlot:SetPoint('TOPLEFT', _G.PaperDollItemsFrame, 'BOTTOMLEFT', 139, 127)
+        elseif _G.CharacterMainHandSlot and _G.PaperDollItemsFrame then
+            _G.CharacterMainHandSlot:ClearAllPoints()
+            _G.CharacterMainHandSlot:SetPoint('BOTTOMLEFT', _G.PaperDollItemsFrame, 'BOTTOMLEFT', 106, -5)
+        end
+
+        if module.Stats and _G.CharacterHandsSlot and _G.PaperDollItemsFrame then
+            _G.CharacterHandsSlot:ClearAllPoints()
+            _G.CharacterHandsSlot:SetPoint('TOPRIGHT', _G.PaperDollItemsFrame, 'TOPRIGHT', -11, -74)
+        end
+        if module.Stats and _G.CharacterModelFrame and _G.PaperDollFrame then
+            _G.CharacterModelFrame:ClearAllPoints()
+            _G.CharacterModelFrame:SetPoint('TOPLEFT', _G.PaperDollFrame, 'TOPLEFT', 65, -108)
+            if _G.CharacterModelFrame.backdrop then
+                _G.CharacterModelFrame.backdrop:Hide()
+            end
+        end
 
         if frame.BottomRightCorner then
             frame.BottomRightCorner:ClearAllPoints()
-            frame.BottomRightCorner:SetPoint('BOTTOMRIGHT', frame, 'BOTTOMRIGHT', 0, -20)
+            frame.BottomRightCorner:SetPoint('BOTTOMRIGHT', frame, 'BOTTOMRIGHT', 0, -26)
         end
         if frame.BottomLeftCorner then
             frame.BottomLeftCorner:ClearAllPoints()
-            frame.BottomLeftCorner:SetPoint('BOTTOMLEFT', frame, 'BOTTOMLEFT', 0, -20)
+            frame.BottomLeftCorner:SetPoint('BOTTOMLEFT', frame, 'BOTTOMLEFT', 0, -26)
         end
-        CharacterFrameTab1:ClearAllPoints()
-        CharacterFrameTab1:SetPoint('TOPLEFT', frame, 'BOTTOMLEFT', -10, -24)
+        if _G.CharacterFrameTab1 then
+            _G.CharacterFrameTab1:ClearAllPoints()
+            if module.Stats and frame.backdrop then
+                _G.CharacterFrameTab1:SetPoint('TOPLEFT', frame.backdrop, 'BOTTOMLEFT', 1, 0)
+            else
+                _G.CharacterFrameTab1:SetPoint('TOPLEFT', frame, 'BOTTOMLEFT', -10, -24)
+            end
+        end
 
-        if not frame.ReforgedArmory_Hooked then
-            _G.CharacterModelScene.BackgroundTopLeft:Hide()
-            _G.CharacterModelScene.BackgroundTopRight:Hide()
-            _G.CharacterModelScene.BackgroundBotLeft:Hide()
-            _G.CharacterModelScene.BackgroundBotRight:Hide()
-            _G.CharacterModelScene.backdrop:Hide()
-            _G.CharacterModelScene.BackgroundOverlay:Hide() --! Maybe use this over background images?
-            _G.CharacterModelScene.ControlFrame:HookScript('OnEnter', ControlFrame_OnEnter)
-            _G.CharacterModelScene.ControlFrame:HookScript('OnLeave', ControlFrame_OnLeave)
-            _G.CharacterModelScene.ControlFrame:HookScript('OnShow', ControlFrame_OnShow)
-            _G.CharacterModelScene:HookScript('OnLeave', ControlFrame_OnLeave)
+        if modelScene and not frame.ReforgedArmory_Hooked then
+            if modelScene.BackgroundTopLeft then modelScene.BackgroundTopLeft:Hide() end
+            if modelScene.BackgroundTopRight then modelScene.BackgroundTopRight:Hide() end
+            if modelScene.BackgroundBotLeft then modelScene.BackgroundBotLeft:Hide() end
+            if modelScene.BackgroundBotRight then modelScene.BackgroundBotRight:Hide() end
+            if modelScene.backdrop then modelScene.backdrop:Hide() end
+            if modelScene.BackgroundOverlay then modelScene.BackgroundOverlay:Hide() end
+            if modelScene.ControlFrame then
+                modelScene.ControlFrame:HookScript('OnEnter', ControlFrame_OnEnter)
+                modelScene.ControlFrame:HookScript('OnLeave', ControlFrame_OnLeave)
+                modelScene.ControlFrame:HookScript('OnShow', ControlFrame_OnShow)
+            end
+            modelScene:HookScript('OnLeave', ControlFrame_OnLeave)
         end
 
         local controlsDisplayMode = E.db.cataarmory.character.model.controlsDisplayMode
-        if controlsDisplayMode == 'SHOW' then
-            _G.CharacterModelScene.ControlFrame:Show()
-        else
-            _G.CharacterModelScene.ControlFrame:Hide()
+        if modelScene and modelScene.ControlFrame then
+            if controlsDisplayMode == 'SHOW' then
+                modelScene.ControlFrame:Show()
+            else
+                modelScene.ControlFrame:Hide()
+            end
         end
-
-        frame.BottomLeftCorner:ClearAllPoints()
-        frame.BottomLeftCorner:SetPoint('BOTTOMLEFT', frame, 'BOTTOMLEFT', 0, -26)
-        frame.BottomRightCorner:ClearAllPoints()
-        frame.BottomRightCorner:SetPoint('BOTTOMRIGHT', frame, 'BOTTOMRIGHT', 0, -26)
 
         frame.ReforgedArmory_Hooked = true
     end
@@ -1195,21 +1379,34 @@ local function HandleTabs()
     if not E.private.skins.blizzard.enable or not E.private.skins.blizzard.character then return end
 
     --* Using ElvUI function with offsets adjusted
+    local tabs = { _G.CharacterFrameTab1, _G.CharacterFrameTab2, _G.CharacterFrameTab3, _G.CharacterFrameTab4, _G.CharacterFrameTab5 }
     local lastTab
-    for index, tab in next, { _G.CharacterFrameTab1, HasPetUI() and _G.CharacterFrameTab2 or nil, _G.CharacterFrameTab3, _G.CharacterFrameTab4, _G.CharacterFrameTab5 } do
-        tab:ClearAllPoints()
+    for index = 1, 5 do
+        local tab = tabs[index]
+        if tab and (index ~= 2 or HasPetUI()) then
+            tab:ClearAllPoints()
 
-        if index == 1 then
-            tab:Point('TOPLEFT', _G.CharacterFrame, 'BOTTOMLEFT', -10, -25)
-        else
-            tab:Point('TOPLEFT', lastTab, 'TOPRIGHT', -19, 0)
+            if not lastTab then
+                if module.Stats and _G.CharacterFrame.backdrop then
+                    tab:Point('TOPLEFT', _G.CharacterFrame.backdrop, 'BOTTOMLEFT', 1, 0)
+                else
+                    tab:Point('TOPLEFT', _G.CharacterFrame, 'BOTTOMLEFT', -10, -25)
+                end
+            else
+                tab:Point('TOPLEFT', lastTab, 'TOPRIGHT', -19, 0)
+            end
+
+            lastTab = tab
         end
-
-        lastTab = tab
     end
 end
 
 function module:ToggleItemLevelInfo(setupCharacterPage)
+	if LibGearScore and not module.GearScoreCallbackRegistered then
+		LibGearScore.RegisterCallback(module, 'LibGearScore_Update')
+		module.GearScoreCallbackRegistered = true
+	end
+
     if setupCharacterPage then
         module:CreateSlotStrings(_G.CharacterFrame, 'Character')
     end
@@ -1223,11 +1420,14 @@ function module:ToggleItemLevelInfo(setupCharacterPage)
         if not module:IsHooked(_G.CharacterFrame, 'OnShow') then
             module:SecureHookScript(_G.CharacterFrame, 'OnShow', CharacterFrame_OnShow)
         end
-        if not module:IsHooked(_G.CharacterFrame, 'ShowSubFrame') then
+        if _G.CharacterFrame.ShowSubFrame and not module:IsHooked(_G.CharacterFrame, 'ShowSubFrame') then
             module:SecureHook(_G.CharacterFrame, 'ShowSubFrame', HandleCharacterFrameExpand)
         end
-        if not module:IsHooked(_G.CharacterFrame, 'UpdateTabBounds') then
+        if _G.CharacterFrame.UpdateTabBounds and not module:IsHooked(_G.CharacterFrame, 'UpdateTabBounds') then
             module:SecureHook(_G.CharacterFrame, 'UpdateTabBounds', HandleTabs)
+        end
+        if E.TBC and _G.PaperDollFrame_UpdateStats and not module:IsHooked('PaperDollFrame_UpdateStats') then
+            module:SecureHook('PaperDollFrame_UpdateStats', CreateLegacyStatsPane)
         end
 
         if not setupCharacterPage then
@@ -1242,24 +1442,27 @@ function module:ToggleItemLevelInfo(setupCharacterPage)
         if module:IsHooked(_G.CharacterFrame, 'OnShow') then
             module:Unhook(_G.CharacterFrame, 'OnShow')
         end
-        if not module:IsHooked(_G.CharacterFrame, 'ShowSubFrame') then
+        if _G.CharacterFrame.ShowSubFrame and module:IsHooked(_G.CharacterFrame, 'ShowSubFrame') then
             module:Unhook(_G.CharacterFrame, 'ShowSubFrame')
         end
-        if not module:IsHooked(_G.CharacterFrame, 'UpdateTabBounds') then
+        if _G.CharacterFrame.UpdateTabBounds and module:IsHooked(_G.CharacterFrame, 'UpdateTabBounds') then
             module:Unhook(_G.CharacterFrame, 'UpdateTabBounds')
+        end
+        if module:IsHooked('PaperDollFrame_UpdateStats') then
+            module:Unhook('PaperDollFrame_UpdateStats')
         end
         module:ClearPageInfo(_G.CharacterFrame, 'Character')
     end
 
     if E.db.cataarmory.inspect.enable then
         module:RegisterEvent('INSPECT_READY', 'UpdateInspectInfo')
-        if IsAddOnLoaded('Blizzard_InspectUI') and not module:IsHooked(_G.InspectFrame, 'OnShow') then
+        if IsAddOnLoaded('Blizzard_InspectUI') and _G.InspectFrame and not module:IsHooked(_G.InspectFrame, 'OnShow') then
             module:SecureHookScript(_G.InspectFrame, 'OnShow', module.InspectFrame_OnShow)
         end
         module:UpdateInspectInfo()
     else
         module:UnregisterEvent('INSPECT_READY')
-        if IsAddOnLoaded('Blizzard_InspectUI') and module:IsHooked(_G.InspectFrame, 'OnShow') then
+        if IsAddOnLoaded('Blizzard_InspectUI') and _G.InspectFrame and module:IsHooked(_G.InspectFrame, 'OnShow') then
             module:Unhook(_G.InspectFrame, 'OnShow')
         end
         module:ClearPageInfo(_G.InspectFrame, 'Inspect')
